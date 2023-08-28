@@ -1,3 +1,4 @@
+// Topic ID: 0.0.1089802
 require("dotenv").config();
 const { Client, TopicCreateTransaction, TopicMessageQuery, TopicMessageSubmitTransaction, PrivateKey, AccountCreateTransaction, Hbar, } = require("@hashgraph/sdk");
 
