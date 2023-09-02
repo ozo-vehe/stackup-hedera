@@ -14,3 +14,4 @@ contract MerchantBackend is ExpiryHelper {
   address public ftAddress;
   address public owner;
   uint256 public lockupAmount = 100000000000;
+}
