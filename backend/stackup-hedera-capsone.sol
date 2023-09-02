@@ -34,4 +34,105 @@ contract MerchantBackend is ExpiryHelper {
     owner = msg.sender;
     emit CreatedToken(tokenAddress);
   }
+
+  function createNFT(string memory name, string memory symbol) external payable {
+    IHederaTokenService.TokenKey[]
+      memory keys = new IHederaTokenService.TokenKey[](1);
+
+    // Set this contract as supply
+    keys[0] = getSingleKey(
+      KeyType.SUPPLY,
+      KeyValueType.CONTRACT_ID,
+      address(this)
+    );
+
+    IHederaTokenService.HederaToken memory token;
+    token.name = name;
+    token.symbol = symbol;
+    token.memo = "CAR Collection By: Ozovehe";
+    token.treasury = address(this);
+    token.tokenSupplyType = true; // set supply to FINITE
+    token.maxSupply = 10;
+    token.tokenKeys = keys;
+    token.freezeDefault = false;
+    token.expiry = createAutoRenewExpiry(address(this), 7000000);
+
+    (int responseCode, address createdToken) = HederaTokenService
+      .createNonFungibleToken(token);
+
+    if (responseCode != HederaResponseCodes.SUCCESS) {
+      revert("Failed to create non-fungible token");
+    }
+
+    emit CreatedToken(createdToken);
+  }
+
+  function mintNFT(address token, bytes[] memory metadata) external {
+    (int response, , int64[] memory serial) = HederaTokenService.mintToken(
+      token,
+      0,
+      metadata
+    );
+
+    if (response != HederaResponseCodes.SUCCESS) {
+      revert("Failed to mint non-fungible token");
+    }
+
+    emit MintedToken(serial);
+  }
+
+  function borrowing(address nftAddress, int64 serial) external payable {
+    // Check if customer transfers the lockup amount
+    require(msg.value == lockupAmount, "Incorrect amount");
+
+    // Transfer NFT to customer
+    int response = HederaTokenService.transferNFT(
+      nftAddress,
+      address(this),
+      msg.sender,
+      serial
+    );
+
+    if (response != HederaResponseCodes.SUCCESS) {
+      revert("Failed to transfer non-fungible token");
+    }
+
+    emit Response(response);
+  }
+
+  function returning(address nftAddress, int64 serial) external payable {
+    // Return NFT from customer
+    int response = HederaTokenService.transferNFT(
+      nftAddress,
+      msg.sender,
+      address(this),
+      serial
+    );
+
+    if (response != HederaResponseCodes.SUCCESS) {
+      revert("Failed to transfer non-fungible token");
+    }
+
+    // Return HBAR to customer
+    payable(msg.sender).transfer(lockupAmount);
+    emit Response(response);
+  }
+
+  function scoring(address receiver, int64 amount) external {
+    require(msg.sender == owner, "Not owner");
+    require(amount <= 5, "Only can allocate up to 5 REP tokens");
+
+    int response = HederaTokenService.transferToken(
+      ftAddress,
+      address(this),
+      receiver,
+      amount
+    );
+
+    if (response != HederaResponseCodes.SUCCESS) {
+      revert("Transfer Failed");
+    }
+
+    emit Response(response);
+  }
 }
