@@ -14,4 +14,24 @@ contract MerchantBackend is ExpiryHelper {
   address public ftAddress;
   address public owner;
   uint256 public lockupAmount = 100000000000;
+
+  constructor() payable {
+    IHederaTokenService.HederaToken memory token;
+    token.name = "Reputation Tokens";
+    token.symbol = "REP";
+    token.memo = "REP Tokens By: Ozovehe";
+    token.treasury = address(this);
+    token.expiry = createAutoRenewExpiry(address(this), 7000000);
+
+    (int responseCode, address tokenAddress) = HederaTokenService
+      .createFungibleToken(token, 1000, 0);
+
+    if (responseCode != HederaResponseCodes.SUCCESS) {
+      revert();
+    }
+
+    ftAddress = tokenAddress;
+    owner = msg.sender;
+    emit CreatedToken(tokenAddress);
+  }
 }
